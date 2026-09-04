@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hearthstone Warrior Card Quiz</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #10131a;
+      --panel: #191e28;
+      --panel2: #222938;
+      --text: #f1f3f7;
+      --muted: #9ca6b7;
+      --accent: #d8a84e;
+      --good: #5fcf8a;
+      --bad: #e06b6b;
+      --border: #343d4d;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #20283a 0, var(--bg) 45%);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .app {
+      width: min(760px, 100%);
+      background: rgba(25, 30, 40, .96);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, .35);
+    }
+
+    h1 {
+      margin: 0 0 5px;
+      font-size: clamp(24px, 5vw, 36px);
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 22px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .progress {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .progress span {
+      color: var(--accent);
+    }
+
+    button {
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      color: var(--text);
+      border-radius: 9px;
+      padding: 9px 13px;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    button:hover {
+      border-color: #596579;
+    }
+
+    .card-area {
+      height: 420px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 20px;
+    }
+
+    .card-area img {
+      width: min(330px, 72vw);
+      max-height: 495px;
+      object-fit: contain;
+      border-radius: 12px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, .5);
+    }
+
+    .placeholder {
+      color: var(--muted);
+      text-align: center;
+      padding: 50px 20px;
+    }
+
+    form {
+      display: flex;
+      gap: 10px;
+    }
+
+    input {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid var(--border);
+      background: #0e1117;
+      color: var(--text);
+      border-radius: 9px;
+      padding: 13px 14px;
+      font: inherit;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+    }
+
+    form button {
+      background: var(--accent);
+      color: #17130b;
+      border-color: var(--accent);
+      font-weight: 800;
+    }
+
+    .message {
+      min-height: 27px;
+      margin-top: 12px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .message.good {
+      color: var(--good);
+    }
+
+    .message.bad {
+      color: var(--bad);
+    }
+
+    .card-list-section {
+      border-top: 1px solid var(--border);
+      padding-top: 18px;
+    }
+
+    .card-lists {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+      margin-top: 24px;
+    }
+
+    .card-list-section summary {
+      cursor: pointer;
+      color: var(--muted);
+    }
+
+    .card-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 13px;
+    }
+
+    .chip {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      padding: 5px 8px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .chip.common {
+      border-color: #8d96a3;
+      color: #d7dbe0;
+    }
+
+    .chip.rare {
+      border-color: #4b9be8;
+      color: #72b7ff;
+    }
+
+    .chip.epic {
+      border-color: #a86de0;
+      color: #c38af2;
+    }
+
+    .chip.legendary {
+      border-color: #e5a43a;
+      color: #ffc55e;
+    }
+
+    .chip.free {
+      border-color: #70b67b;
+      color: #8ed99a;
+    }
+
+    .chip.reward {
+      border-color: #c6a96b;
+      color: #e2c98f;
+    }
+
+    .done {
+      text-align: center;
+      padding: 60px 15px;
+    }
+
+    .done h2 {
+      font-size: 32px;
+      margin: 0 0 8px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(5, 7, 12, .82);
+    }
+
+    .modal-panel {
+      width: min(420px, 100%);
+      padding: 28px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, .55);
+    }
+
+    .modal-panel h2 {
+      margin: 0 0 8px;
+    }
+
+    .modal-panel p {
+      color: var(--muted);
+      margin: 0 0 20px;
+    }
+
+    .class-select {
+      width: 100%;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+      background: #0e1117;
+      color: var(--text);
+      border-radius: 9px;
+      padding: 12px;
+      font: inherit;
+    }
+
+    .class-start {
+      width: 100%;
+      background: var(--accent);
+      color: #17130b;
+      border-color: var(--accent);
+      font-weight: 800;
+    }
+
+    .error {
+      color: var(--bad);
+      line-height: 1.5;
+      text-align: center;
+      padding: 40px 10px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 560px) {
+      .app {
+        padding: 18px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+      }
+
+      form {
+        flex-direction: column;
+      }
+
+      form button {
+        width: 100%;
+      }
+
+      .card-area {
+        height: 340px;
+      }
+
+      .card-lists {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <h1 id="quizTitle">Card Quiz</h1>
+    <div id="quizSubtitle" class="subtitle">Name every collectible card currently playable in Wild.</div>
+
+    <div id="loading" class="placeholder">
+      Loading the current Hearthstone card database…
+    </div>
+
+    <section id="game" class="hidden">
+      <div class="topbar">
+        <div class="progress"><span id="count">0</span> / <span id="total">0</span> guessed</div>
+        <button id="changeClass" type="button">Change class</button>
+        <button id="reset" type="button">Restart</button>
+      </div>
+
+      <div id="cardArea" class="card-area"></div>
+
+      <form id="guessForm" autocomplete="off">
+        <input id="guess" type="text" placeholder="Enter card name…" autofocus>
+        <button type="submit">Guess</button>
+      </form>
+      <div id="message" class="message"></div>
+      <div class="hint">Enter any unguessed card name. Names are case-insensitive, and punctuation is ignored.</div>
+
+      <div class="card-lists">
+        <details id="remainingSection" class="card-list-section">
+          <summary>Unguessed cards</summary>
+          <div id="remainingList" class="card-list"></div>
+        </details>
+
+        <details class="card-list-section">
+          <summary>Guessed cards</summary>
+          <div id="guessedList" class="card-list"></div>
+        </details>
+      </div>
+    </section>
+
+    <section id="finished" class="done hidden">
+      <h2>Complete</h2>
+      <p id="finishedMessage">You named every card in the current Wild pool.</p>
+      <button id="playAgain" type="button">Play again</button>
+    </section>
+
+    <div id="error" class="error hidden"></div>
+  </main>
+
+  <div id="classModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="classModalTitle">
+    <div class="modal-panel">
+      <h2 id="classModalTitle">Choose a class</h2>
+      <p>Which class would you like to start guessing?</p>
+      <select id="classSelect" class="class-select" aria-label="Choose a class"></select>
+      <button id="startClass" class="class-start" type="button">Start quiz</button>
+    </div>
+  </div>
+
+  <script>
+    "use strict";
+
+    /*
+    * The card list is deliberately loaded from HearthstoneJSON rather than
+    * copied into this file. Its /latest/ endpoint tracks the current game data,
+    * so this page stays current as Hearthstone changes. The collectible endpoint
+    * keeps this a single portable HTML file; no dataset installation is needed.
+     *
+     * The quiz itself is still a single HTML file; it only needs internet access
+     * to obtain the current card list and card images.
+     */
+    const CARD_DATA_URL =
+      "https://api.hearthstonejson.com/v1/latest/enUS/cards.collectible.json";
+
+    const ART_URL =
+      "https://art.hearthstonejson.com/v1/render/latest/enUS/512x/";
+
+    const STORAGE_KEY = "hearthstone-card-quiz-v1";
+    const LEGACY_STORAGE_KEY = "warrior-card-quiz-v1";
+
+    const CLASS_OPTIONS = [
+      ["DEATHKNIGHT", "Death Knight"],
+      ["DEMONHUNTER", "Demon Hunter"],
+      ["DRUID", "Druid"],
+      ["HUNTER", "Hunter"],
+      ["MAGE", "Mage"],
+      ["PALADIN", "Paladin"],
+      ["PRIEST", "Priest"],
+      ["ROGUE", "Rogue"],
+      ["SHAMAN", "Shaman"],
+      ["WARLOCK", "Warlock"],
+      ["WARRIOR", "Warrior"]
+    ];
+
+    let allCards = [];
+    let cards = [];
+    let remaining = [];
+    let guessed = new Set();
+    let progressByClass = {};
+    let lastGuessedByClass = {};
+    let selectedClass = "";
+    let currentCard = null;
+    let lastGuessedCard = null;
+    let acceptingGuess = true;
+
+    const $ = id => document.getElementById(id);
+
+    function normalise(value) {
+      return value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/['’`]/g, "")
+        .replace(/[^a-z0-9]+/g, "");
+    }
+
+    function stringSimilarity(first, second) {
+      if (first === second) return 1;
+      if (!first.length || !second.length) return 0;
+
+      const previousRow = Array.from({ length: second.length + 1 }, (_, index) => index);
+      for (let firstIndex = 1; firstIndex <= first.length; firstIndex += 1) {
+        const currentRow = [firstIndex];
+        for (let secondIndex = 1; secondIndex <= second.length; secondIndex += 1) {
+          const substitutionCost = first[firstIndex - 1] === second[secondIndex - 1] ? 0 : 1;
+          currentRow[secondIndex] = Math.min(
+            currentRow[secondIndex - 1] + 1,
+            previousRow[secondIndex] + 1,
+            previousRow[secondIndex - 1] + substitutionCost
+          );
+        }
+        previousRow.splice(0, previousRow.length, ...currentRow);
+      }
+
+      return 1 - previousRow[second.length] / Math.max(first.length, second.length);
+    }
+
+    function className(classCode) {
+      return CLASS_OPTIONS.find(([code]) => code === classCode)?.[1] || classCode;
+    }
+
+    function isClassCard(card, classCode) {
+      return card.cardClass === classCode ||
+        Array.isArray(card.classes) && card.classes.includes(classCode);
+    }
+
+    function saveState() {
+      progressByClass[selectedClass] = [...guessed];
+      lastGuessedByClass[selectedClass] = lastGuessedCard?.id || null;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        progressByClass,
+        lastGuessedByClass
+      }));
+    }
+
+    function loadState() {
+      let savedState = {};
+      try {
+        savedState = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      } catch {
+        savedState = {};
+      }
+
+      if (savedState.progressByClass && typeof savedState.progressByClass === "object") {
+        progressByClass = savedState.progressByClass;
+        if (savedState.lastGuessedByClass &&
+          typeof savedState.lastGuessedByClass === "object") {
+          lastGuessedByClass = savedState.lastGuessedByClass;
+        }
+      } else if (Array.isArray(savedState.guessed)) {
+        progressByClass.WARRIOR = savedState.guessed;
+      } else {
+        try {
+          const legacyState = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) || "{}");
+          if (Array.isArray(legacyState.guessed)) {
+            progressByClass.WARRIOR = legacyState.guessed;
+          }
+        } catch {
+          progressByClass = {};
+        }
+      }
+    }
+
+    function renderClassOptions() {
+      $("classSelect").replaceChildren(...CLASS_OPTIONS.map(([code, name]) =>
+        new Option(name, code)));
+      $("classSelect").value = selectedClass || "WARRIOR";
+    }
+
+    function configureClass(classCode) {
+      selectedClass = classCode;
+      const uniqueCardsByName = new Map();
+      allCards
+        .filter(card => card.collectible === true &&
+          isClassCard(card, selectedClass) && card.set !== "HERO_SKINS")
+        .filter((card, index, arr) =>
+          arr.findIndex(other => other.id === card.id) === index)
+        .forEach(card => {
+          const nameKey = normalise(card.name);
+          if (!uniqueCardsByName.has(nameKey)) {
+            uniqueCardsByName.set(nameKey, card);
+          }
+        });
+
+      cards = [...uniqueCardsByName.values()]
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      if (!cards.length) throw new Error(`No ${className(selectedClass)} cards were returned.`);
+
+      const validIds = new Set(cards.map(card => card.id));
+      const cardsByName = new Map(cards.map(card => [card.name, card.id]));
+      const savedGuessed = Array.isArray(progressByClass[selectedClass])
+        ? progressByClass[selectedClass]
+        : [];
+      guessed = new Set(savedGuessed
+        .map(value => validIds.has(value) ? value : cardsByName.get(value))
+        .filter(Boolean));
+      currentCard = null;
+      lastGuessedCard = cards.find(card => card.id === lastGuessedByClass[selectedClass]) || null;
+      $("quizTitle").textContent = `${className(selectedClass)} Card Quiz`;
+      $("finishedMessage").textContent =
+        `You named every ${className(selectedClass)} card in the current Wild pool.`;
+    }
+
+    function startSelectedClass() {
+      try {
+        configureClass($("classSelect").value);
+        $("classModal").classList.add("hidden");
+        $("finished").classList.add("hidden");
+        $("game").classList.remove("hidden");
+        renderProgress();
+        renderGuessed();
+        chooseNextCard();
+        showLastGuessedCard();
+      } catch (error) {
+        $("error").classList.remove("hidden");
+        $("error").textContent = error.message;
+      }
+    }
+
+    function renderProgress() {
+      $("count").textContent = guessed.size;
+      $("total").textContent = cards.length;
+    }
+
+    function rarityClass(card) {
+      return String(card.rarity || "COMMON").toLowerCase();
+    }
+
+    const rarityOrder = {
+      LEGENDARY: 0,
+      EPIC: 1,
+      RARE: 2,
+      COMMON: 3,
+      FREE: 4,
+      REWARD: 5
+    };
+
+    function compareByRarity(a, b) {
+      const rarityDifference = (rarityOrder[a.rarity] ?? 99) -
+        (rarityOrder[b.rarity] ?? 99);
+      return rarityDifference || a.name.localeCompare(b.name);
+    }
+
+    function renderCardList(elementId, cardsToRender) {
+      $(elementId).innerHTML = cardsToRender
+        .sort(compareByRarity)
+        .map(card =>
+          `<span class="chip ${rarityClass(card)}">${escapeHtml(card.name)}</span>`)
+        .join("");
+    }
+
+    function renderGuessed() {
+      renderCardList("guessedList", cards.filter(card => guessed.has(card.id)));
+      renderCardList("remainingList", cards.filter(card => !guessed.has(card.id)));
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showCardImage(card) {
+      if (!card) return;
+
+      const image = document.createElement("img");
+      image.alt = card.name;
+      image.src = ART_URL + encodeURIComponent(card.id) + ".png";
+      image.onerror = () => {
+        $("cardArea").innerHTML =
+          `<div class="placeholder">Card image could not be loaded.</div>`;
+      };
+      $("cardArea").replaceChildren(image);
+    }
+
+    function showLastGuessedCard() {
+      showCardImage(lastGuessedCard);
+    }
+
+    function chooseNextCard() {
+      acceptingGuess = true;
+      remaining = cards.filter(card => !guessed.has(card.id));
+      renderGuessed();
+
+      if (!remaining.length) {
+        $("game").classList.add("hidden");
+        $("finished").classList.remove("hidden");
+        return;
+      }
+
+      // Avoid immediately repeating the previous card where possible.
+      let pool = remaining;
+      if (remaining.length > 1 && currentCard) {
+        pool = remaining.filter(c => c.id !== currentCard.id);
+      }
+
+      currentCard = pool[Math.floor(Math.random() * pool.length)];
+      $("cardArea").replaceChildren();
+      $("guess").value = "";
+      $("guess").focus();
+      $("message").textContent = "";
+      $("message").className = "message";
+    }
+
+    function submitGuess(event) {
+      event.preventDefault();
+      if (!acceptingGuess) return;
+
+      const value = $("guess").value.trim();
+      if (!value) return;
+
+      const actual = normalise(value);
+      const matchedCards = cards.filter(card => normalise(card.name) === actual);
+      const unguessedMatches = matchedCards.filter(card => !guessed.has(card.id));
+
+      if (unguessedMatches.length) {
+        currentCard = unguessedMatches[0];
+        lastGuessedCard = currentCard;
+        guessed.add(currentCard.id);
+        $("guess").value = "";
+        saveState();
+        renderProgress();
+        renderGuessed();
+
+        $("message").textContent = "Correct.";
+        $("message").className = "message good";
+
+        showLastGuessedCard();
+      } else {
+        if (matchedCards.length) {
+          $("message").textContent = "Already guessed.";
+        } else {
+          const closestSimilarity = Math.max(
+            ...cards.map(card => stringSimilarity(actual, normalise(card.name)))
+          );
+          const similarityPercent = Math.round(closestSimilarity * 100);
+          $("message").textContent =
+            `Incorrect. Your closest match was ${similarityPercent}% similar.`;
+        }
+        $("message").className = "message bad";
+        $("guess").select();
+      }
+    }
+
+    function resetGame() {
+      guessed = new Set();
+      currentCard = null;
+      lastGuessedCard = null;
+      progressByClass[selectedClass] = [];
+      saveState();
+      $("finished").classList.add("hidden");
+      $("game").classList.remove("hidden");
+      renderProgress();
+      renderGuessed();
+      chooseNextCard();
+    }
+
+    async function init() {
+      try {
+        const response = await fetch(CARD_DATA_URL, { cache: "no-cache" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        allCards = await response.json();
+        loadState();
+        renderClassOptions();
+
+        $("loading").classList.add("hidden");
+        $("classModal").classList.remove("hidden");
+        $("classSelect").focus();
+      } catch (error) {
+        $("loading").classList.add("hidden");
+        $("error").classList.remove("hidden");
+        $("error").innerHTML =
+          "<strong>Could not load the card database.</strong><br>" +
+          "This quiz needs an internet connection to retrieve the current " +
+          "Hearthstone card list and images.<br><br>" +
+          escapeHtml(error.message);
+      }
+    }
+
+    $("guessForm").addEventListener("submit", submitGuess);
+    $("reset").addEventListener("click", resetGame);
+    $("playAgain").addEventListener("click", resetGame);
+    $("changeClass").addEventListener("click", () => {
+      $("classSelect").value = selectedClass;
+      $("classModal").classList.remove("hidden");
+    });
+    $("startClass").addEventListener("click", startSelectedClass);
+    $("remainingSection").querySelector("summary").addEventListener("click", event => {
+      if (!$("remainingSection").open &&
+        !window.confirm("Reveal the cards you have not guessed yet?")) {
+        event.preventDefault();
+      }
+    });
+
+    init();
+  </script>
+</body>
+
+</html>
