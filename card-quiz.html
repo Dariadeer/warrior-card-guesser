@@ -85,15 +85,18 @@
     }
 
     .card-area {
-      height: 420px;
+      width: min(100%, 330px);
+      aspect-ratio: 512 / 718;
       display: grid;
       place-items: center;
-      margin-bottom: 20px;
+      margin: 0 auto 20px;
+      overflow: hidden;
     }
 
     .card-area img {
-      width: min(330px, 72vw);
-      max-height: 495px;
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
       object-fit: contain;
       border-radius: 12px;
       box-shadow: 0 12px 35px rgba(0, 0, 0, .5);
@@ -131,6 +134,17 @@
       color: #17130b;
       border-color: var(--accent);
       font-weight: 800;
+    }
+
+    form .hint-button {
+      background: var(--panel2);
+      color: var(--text);
+      border-color: var(--border);
+      font-weight: 700;
+    }
+
+    form .hint-button:hover {
+      border-color: var(--accent);
     }
 
     .message {
@@ -236,12 +250,33 @@
     }
 
     .modal-panel {
-      width: min(420px, 100%);
+      position: relative;
+      width: min(620px, 100%);
       padding: 28px;
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 14px;
       box-shadow: 0 20px 70px rgba(0, 0, 0, .55);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      border: 0;
+      background: var(--panel2);
+      color: var(--text);
     }
 
     .modal-panel h2 {
@@ -253,15 +288,68 @@
       margin: 0 0 20px;
     }
 
-    .class-select {
-      width: 100%;
-      margin-bottom: 12px;
+    .class-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .class-option {
+      min-width: 0;
+      padding: 12px 7px 10px;
+      background: var(--panel2);
       border: 1px solid var(--border);
-      background: #0e1117;
-      color: var(--text);
       border-radius: 9px;
-      padding: 12px;
+      color: var(--text);
+      text-align: center;
+      cursor: pointer;
       font: inherit;
+    }
+
+    .class-option:hover,
+    .class-option.selected {
+      border-color: var(--accent);
+      background: #2a3342;
+      box-shadow: 0 0 0 2px rgba(216, 168, 78, .18);
+    }
+
+    .class-icon {
+      display: grid;
+      place-items: center;
+      width: 52px;
+      height: 52px;
+      margin: 0 auto 8px;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      color: var(--accent);
+      font-size: 27px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .class-icon img {
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+    }
+
+    .class-name,
+    .class-progress {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .class-name {
+      font-weight: 750;
+    }
+
+    .class-progress {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
     }
 
     .class-start {
@@ -303,12 +391,12 @@
         width: 100%;
       }
 
-      .card-area {
-        height: 340px;
-      }
-
       .card-lists {
         grid-template-columns: 1fr;
+      }
+
+      .class-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
     }
   </style>
@@ -335,6 +423,7 @@
       <form id="guessForm" autocomplete="off">
         <input id="guess" type="text" placeholder="Enter card name…" autofocus>
         <button type="submit">Guess</button>
+        <button id="hintButton" class="hint-button" type="button">Hint</button>
       </form>
       <div id="message" class="message"></div>
       <div class="hint">Enter any unguessed card name. Names are case-insensitive, and punctuation is ignored.</div>
@@ -363,9 +452,11 @@
 
   <div id="classModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="classModalTitle">
     <div class="modal-panel">
+      <button id="closeClassModal" class="modal-close hidden" type="button"
+        aria-label="Close class selection">&times;</button>
       <h2 id="classModalTitle">Choose a class</h2>
       <p>Which class would you like to start guessing?</p>
-      <select id="classSelect" class="class-select" aria-label="Choose a class"></select>
+      <div id="classGrid" class="class-grid" role="listbox" aria-label="Choose a class"></div>
       <button id="startClass" class="class-start" type="button">Start quiz</button>
     </div>
   </div>
@@ -388,6 +479,7 @@
     const ART_URL =
       "https://art.hearthstonejson.com/v1/render/latest/enUS/512x/";
 
+    const HINT_SIMILARITY_THRESHOLD = 0.5;
     const STORAGE_KEY = "hearthstone-card-quiz-v1";
     const LEGACY_STORAGE_KEY = "warrior-card-quiz-v1";
 
@@ -405,6 +497,34 @@
       ["WARRIOR", "Warrior"]
     ];
 
+    const CLASS_ICONS = {
+      DEATHKNIGHT: "☠",
+      DEMONHUNTER: "◈",
+      DRUID: "✦",
+      HUNTER: "⌁",
+      MAGE: "✧",
+      PALADIN: "✚",
+      PRIEST: "☼",
+      ROGUE: "◒",
+      SHAMAN: "ϟ",
+      WARLOCK: "◉",
+      WARRIOR: "⚔"
+    };
+
+    const CLASS_ICON_URLS = {
+      DEATHKNIGHT: "https://d2q63o9r0h0ohi.cloudfront.net/images/icons/classes/icon_class_deathknight-854049b0f1dcdbd6f25dc4737e405ef55af29c11fdabd86c5a7d788846800510b79ccf4adac0fd0d73ef5bc3025715b04b89443ae9265cc7cc405e4dcaad0798.png",
+      DEMONHUNTER: "https://d2q63o9r0h0ohi.cloudfront.net/images/icons/classes/icon_class_demonhunter-46494e0acadb6d525efa129b357a08308f198a758c0dd3ef0d2e7cbcbafb698b3a16b28e757b85af334679d42af7fa686987003dbc38bbc5e05d88967e513b65.png",
+      DRUID: "https://d2q63o9r0h0ohi.cloudfront.net/images/icons/classes/icon_class_druid-ecb441c29d0acfcdf249d0937093ef7591c47fd5edde8378e077d6910476765be5b7a69baf96c2e46593ccea335833d642fe025d314c9094b3156450c1d6cfc8.png",
+      HUNTER: "https://d2q63o9r0h0ohi.cloudfront.net/images/icons/classes/icon_class_hunter-ef27ec5fd8d6780fed15337a45ec524b68f2de7100b210eecd4e40b36572d2c85f98fa29fe9da278ae326e4b18d157e3b5d2addc66a7ce79ae62800001dd45b6.png",
+      MAGE: "https://d2q63o9r0h0ohi.cloudfront.net/images/icons/classes/icon_class_mage-1225102ed2cd41c8ce5d4eb05aae3e9a828e5c79770e1dbc380a6e37b784969506aaedb0f2a832bd9a4218b4e8c0e5ac3e148b263627f5f2c69bf5d18230109e.png",
+      PALADIN: "https://d2q63o9r0h0ohi.cloudfront.net/images/icons/classes/icon_class_paladin-b9092f38f4a1421c5899932f765a80cf45ac73ecccb8c9bbcf67ec1d85ac8ae0f849a24b60d4fd19e8db64e2f991ba0123d210484f2ec8beb93a4a4a4a72b690.png",
+      PRIEST: "https://d2q63o9r0h0ohi.cloudfront.net/images/icons/classes/icon_class_priest-93bbc19811732f7c4d3804371c0023a1ce57497a34c68e2f5ac020c3987fb310ae2eb5c60520cfd6070b47f4d9503a67d0947cd47bcb63584b4f126c50337785.png",
+      ROGUE: "https://d2q63o9r0h0ohi.cloudfront.net/images/icons/classes/icon_class_rogue-4a04957d59d4191f9efbe5e1daaf45eb82dc5b035d2c8ce3cb47a31b145e1250c319111a27f69b066199d17f7a915777a8d1af5e0a87bab4451185cfda20fe20.png",
+      SHAMAN: "https://d2q63o9r0h0ohi.cloudfront.net/images/icons/classes/icon_class_shaman-9e252421bbee86e830faac236f20b533cfecf5259096786f6e749b800ad3c358ab34b6e72431ce45d34ecf2b0d33acec1ac55ffb1a66f465a27b5ab4c7af213a.png",
+      WARLOCK: "https://d2q63o9r0h0ohi.cloudfront.net/images/icons/classes/icon_class_warlock-25740b0eaaa5775502865633dee612da159545390508b6e63b978796e768bd41ce4004c926d9050fac912a012a86ce3dd2da10dccd062dae4abea4e84c2d3b43.png",
+      WARRIOR: "https://d2q63o9r0h0ohi.cloudfront.net/images/icons/classes/icon_class_warrior-fe3e66592446de8a5d34f30599de3ace8c0a65968e260f05654094f3fdd9455847c85eec5ae20201a598fe96b93a13c51df0993164bc0792774eba2f13c395d1.png"
+    };
+
     let allCards = [];
     let cards = [];
     let remaining = [];
@@ -414,6 +534,7 @@
     let selectedClass = "";
     let currentCard = null;
     let lastGuessedCard = null;
+    let quizStarted = false;
     let acceptingGuess = true;
 
     const $ = id => document.getElementById(id);
@@ -448,6 +569,96 @@
       return 1 - previousRow[second.length] / Math.max(first.length, second.length);
     }
 
+    function closestCardFor(value, candidates) {
+      const actual = normalise(value);
+      return candidates
+        .map(card => ({
+          card,
+          similarity: stringSimilarity(actual, normalise(card.name))
+        }))
+        .sort((first, second) => second.similarity - first.similarity)[0];
+    }
+
+    function maskedCardName(guess, card) {
+      const guessValue = normalise(guess);
+      const cardValue = normalise(card.name);
+      const distances = Array.from({ length: guessValue.length + 1 }, () =>
+        Array(cardValue.length + 1).fill(0));
+
+      for (let guessIndex = 0; guessIndex <= guessValue.length; guessIndex += 1) {
+        distances[guessIndex][0] = guessIndex;
+      }
+      for (let cardIndex = 0; cardIndex <= cardValue.length; cardIndex += 1) {
+        distances[0][cardIndex] = cardIndex;
+      }
+      for (let guessIndex = 1; guessIndex <= guessValue.length; guessIndex += 1) {
+        for (let cardIndex = 1; cardIndex <= cardValue.length; cardIndex += 1) {
+          const substitutionCost = guessValue[guessIndex - 1] === cardValue[cardIndex - 1] ? 0 : 1;
+          distances[guessIndex][cardIndex] = Math.min(
+            distances[guessIndex - 1][cardIndex] + 1,
+            distances[guessIndex][cardIndex - 1] + 1,
+            distances[guessIndex - 1][cardIndex - 1] + substitutionCost
+          );
+        }
+      }
+
+      const matchedCardIndexes = new Set();
+      let guessIndex = guessValue.length;
+      let cardIndex = cardValue.length;
+      while (guessIndex > 0 && cardIndex > 0) {
+        if (guessValue[guessIndex - 1] === cardValue[cardIndex - 1] &&
+          distances[guessIndex][cardIndex] === distances[guessIndex - 1][cardIndex - 1]) {
+          matchedCardIndexes.add(cardIndex - 1);
+          guessIndex -= 1;
+          cardIndex -= 1;
+        } else if (distances[guessIndex - 1][cardIndex] <= distances[guessIndex][cardIndex - 1] &&
+          distances[guessIndex - 1][cardIndex] <= distances[guessIndex - 1][cardIndex - 1]) {
+          guessIndex -= 1;
+        } else if (distances[guessIndex][cardIndex - 1] < distances[guessIndex - 1][cardIndex - 1]) {
+          cardIndex -= 1;
+        } else {
+          guessIndex -= 1;
+          cardIndex -= 1;
+        }
+      }
+
+      let normalizedIndex = 0;
+      return [...card.name].map(character => {
+        const normalizedCharacter = normalise(character);
+        if (!normalizedCharacter) return character;
+
+        const isMatched = [...normalizedCharacter].every(() =>
+          matchedCardIndexes.has(normalizedIndex++));
+        return isMatched ? character : "-";
+      }).join("");
+    }
+
+    function showHint() {
+      const value = $("guess").value.trim();
+      if (!value) {
+        $("message").textContent = "Enter a guess first to receive a hint.";
+        $("message").className = "message bad";
+        $("guess").focus();
+        return;
+      }
+
+      const candidates = cards.filter(card => !guessed.has(card.id));
+      if (!candidates.length) return;
+
+      const closest = closestCardFor(value, candidates);
+      if (closest.similarity < HINT_SIMILARITY_THRESHOLD) {
+        $("message").textContent = "Hints require a guess that is at least 50% similar.";
+        $("message").className = "message bad";
+        $("guess").select();
+        return;
+      }
+
+      const similarityPercent = Math.round(closest.similarity * 100);
+      $("message").textContent =
+        `Hint: ${maskedCardName(value, closest.card)} (${similarityPercent}% similar).`;
+      $("message").className = "message";
+    }
+
     function className(classCode) {
       return CLASS_OPTIONS.find(([code]) => code === classCode)?.[1] || classCode;
     }
@@ -461,6 +672,7 @@
       progressByClass[selectedClass] = [...guessed];
       lastGuessedByClass[selectedClass] = lastGuessedCard?.id || null;
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        selectedClass,
         progressByClass,
         lastGuessedByClass
       }));
@@ -476,6 +688,9 @@
 
       if (savedState.progressByClass && typeof savedState.progressByClass === "object") {
         progressByClass = savedState.progressByClass;
+        if (CLASS_OPTIONS.some(([code]) => code === savedState.selectedClass)) {
+          selectedClass = savedState.selectedClass;
+        }
         if (savedState.lastGuessedByClass &&
           typeof savedState.lastGuessedByClass === "object") {
           lastGuessedByClass = savedState.lastGuessedByClass;
@@ -495,17 +710,38 @@
     }
 
     function renderClassOptions() {
-      $("classSelect").replaceChildren(...CLASS_OPTIONS.map(([code, name]) =>
-        new Option(name, code)));
-      $("classSelect").value = selectedClass || "WARRIOR";
+      const activeClass = selectedClass || "WARRIOR";
+      $("classGrid").replaceChildren(...CLASS_OPTIONS.map(([code, name]) => {
+        const classCards = getClassCards(code);
+        const savedGuessed = getSavedGuessed(code, classCards);
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = `class-option${code === activeClass ? " selected" : ""}`;
+        option.dataset.classCode = code;
+        option.setAttribute("role", "option");
+        option.setAttribute("aria-selected", String(code === activeClass));
+        option.innerHTML =
+          `<span class="class-icon" aria-hidden="true"><img src="${CLASS_ICON_URLS[code]}" alt=""></span>` +
+          `<span class="class-name">${escapeHtml(name)}</span>` +
+          `<span class="class-progress">${savedGuessed.size} / ${classCards.length}</span>`;
+        const iconImage = option.querySelector("img");
+        iconImage.addEventListener("error", () => {
+          iconImage.replaceWith(document.createTextNode(CLASS_ICONS[code]));
+        });
+        option.addEventListener("click", () => selectClass(code));
+        option.addEventListener("dblclick", () => {
+          selectClass(code);
+          startSelectedClass();
+        });
+        return option;
+      }));
     }
 
-    function configureClass(classCode) {
-      selectedClass = classCode;
+    function getClassCards(classCode) {
       const uniqueCardsByName = new Map();
       allCards
         .filter(card => card.collectible === true &&
-          isClassCard(card, selectedClass) && card.set !== "HERO_SKINS")
+          isClassCard(card, classCode) && card.set !== "HERO_SKINS")
         .filter((card, index, arr) =>
           arr.findIndex(other => other.id === card.id) === index)
         .forEach(card => {
@@ -514,20 +750,37 @@
             uniqueCardsByName.set(nameKey, card);
           }
         });
-
-      cards = [...uniqueCardsByName.values()]
+      return [...uniqueCardsByName.values()]
         .sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    function getSavedGuessed(classCode, classCards) {
+      const validIds = new Set(classCards.map(card => card.id));
+      const cardsByName = new Map(classCards.map(card => [card.name, card.id]));
+      const savedGuessed = Array.isArray(progressByClass[classCode])
+        ? progressByClass[classCode]
+        : [];
+      return new Set(savedGuessed
+        .map(value => validIds.has(value) ? value : cardsByName.get(value))
+        .filter(Boolean));
+    }
+
+    function selectClass(classCode) {
+      selectedClass = classCode;
+      document.querySelectorAll(".class-option").forEach(option => {
+        const isSelected = option.dataset.classCode === classCode;
+        option.classList.toggle("selected", isSelected);
+        option.setAttribute("aria-selected", String(isSelected));
+      });
+    }
+
+    function configureClass(classCode) {
+      selectedClass = classCode;
+      cards = getClassCards(selectedClass);
 
       if (!cards.length) throw new Error(`No ${className(selectedClass)} cards were returned.`);
 
-      const validIds = new Set(cards.map(card => card.id));
-      const cardsByName = new Map(cards.map(card => [card.name, card.id]));
-      const savedGuessed = Array.isArray(progressByClass[selectedClass])
-        ? progressByClass[selectedClass]
-        : [];
-      guessed = new Set(savedGuessed
-        .map(value => validIds.has(value) ? value : cardsByName.get(value))
-        .filter(Boolean));
+      guessed = getSavedGuessed(selectedClass, cards);
       currentCard = null;
       lastGuessedCard = cards.find(card => card.id === lastGuessedByClass[selectedClass]) || null;
       $("quizTitle").textContent = `${className(selectedClass)} Card Quiz`;
@@ -537,7 +790,9 @@
 
     function startSelectedClass() {
       try {
-        configureClass($("classSelect").value);
+        configureClass(selectedClass || "WARRIOR");
+        quizStarted = true;
+        saveState();
         $("classModal").classList.add("hidden");
         $("finished").classList.add("hidden");
         $("game").classList.remove("hidden");
@@ -549,6 +804,11 @@
         $("error").classList.remove("hidden");
         $("error").textContent = error.message;
       }
+    }
+
+    function closeClassModal() {
+      if (!quizStarted) return;
+      $("classModal").classList.add("hidden");
     }
 
     function renderProgress() {
@@ -664,8 +924,9 @@
         if (matchedCards.length) {
           $("message").textContent = "Already guessed.";
         } else {
+          const unguessedCards = cards.filter(card => !guessed.has(card.id));
           const closestSimilarity = Math.max(
-            ...cards.map(card => stringSimilarity(actual, normalise(card.name)))
+            ...unguessedCards.map(card => stringSimilarity(actual, normalise(card.name)))
           );
           const similarityPercent = Math.round(closestSimilarity * 100);
           $("message").textContent =
@@ -699,8 +960,12 @@
         renderClassOptions();
 
         $("loading").classList.add("hidden");
-        $("classModal").classList.remove("hidden");
-        $("classSelect").focus();
+        if (selectedClass) {
+          startSelectedClass();
+        } else {
+          $("classModal").classList.remove("hidden");
+          $("classGrid").querySelector(".class-option.selected")?.focus();
+        }
       } catch (error) {
         $("loading").classList.add("hidden");
         $("error").classList.remove("hidden");
@@ -713,13 +978,20 @@
     }
 
     $("guessForm").addEventListener("submit", submitGuess);
+    $("hintButton").addEventListener("click", showHint);
     $("reset").addEventListener("click", resetGame);
     $("playAgain").addEventListener("click", resetGame);
     $("changeClass").addEventListener("click", () => {
-      $("classSelect").value = selectedClass;
+      selectClass(selectedClass || "WARRIOR");
+      $("closeClassModal").classList.remove("hidden");
       $("classModal").classList.remove("hidden");
+      $("classGrid").querySelector(".class-option.selected")?.focus();
     });
     $("startClass").addEventListener("click", startSelectedClass);
+    $("closeClassModal").addEventListener("click", closeClassModal);
+    $("classModal").addEventListener("click", event => {
+      if (event.target === $("classModal")) closeClassModal();
+    });
     $("remainingSection").querySelector("summary").addEventListener("click", event => {
       if (!$("remainingSection").open &&
         !window.confirm("Reveal the cards you have not guessed yet?")) {
