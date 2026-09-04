@@ -148,18 +148,24 @@
       color: var(--bad);
     }
 
-    .guessed {
-      margin-top: 24px;
+    .card-list-section {
       border-top: 1px solid var(--border);
       padding-top: 18px;
     }
 
-    .guessed summary {
+    .card-lists {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+      margin-top: 24px;
+    }
+
+    .card-list-section summary {
       cursor: pointer;
       color: var(--muted);
     }
 
-    .guessed-list {
+    .card-list {
       display: flex;
       flex-wrap: wrap;
       gap: 7px;
@@ -253,6 +259,10 @@
       .card-area {
         height: 340px;
       }
+
+      .card-lists {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -281,10 +291,17 @@
       <div id="message" class="message"></div>
       <div class="hint">Enter any unguessed card name. Names are case-insensitive, and punctuation is ignored.</div>
 
-      <details class="guessed">
-        <summary>Guessed cards</summary>
-        <div id="guessedList" class="guessed-list"></div>
-      </details>
+      <div class="card-lists">
+        <details id="remainingSection" class="card-list-section">
+          <summary>Unguessed cards</summary>
+          <div id="remainingList" class="card-list"></div>
+        </details>
+
+        <details class="card-list-section">
+          <summary>Guessed cards</summary>
+          <div id="guessedList" class="card-list"></div>
+        </details>
+      </div>
     </section>
 
     <section id="finished" class="done hidden">
@@ -366,12 +383,32 @@
       return String(card.rarity || "COMMON").toLowerCase();
     }
 
-    function renderGuessed() {
-      $("guessedList").innerHTML = cards
-        .filter(card => guessed.has(card.id))
+    const rarityOrder = {
+      LEGENDARY: 0,
+      EPIC: 1,
+      RARE: 2,
+      COMMON: 3,
+      FREE: 4,
+      REWARD: 5
+    };
+
+    function compareByRarity(a, b) {
+      const rarityDifference = (rarityOrder[a.rarity] ?? 99) -
+        (rarityOrder[b.rarity] ?? 99);
+      return rarityDifference || a.name.localeCompare(b.name);
+    }
+
+    function renderCardList(elementId, cardsToRender) {
+      $(elementId).innerHTML = cardsToRender
+        .sort(compareByRarity)
         .map(card =>
           `<span class="chip ${rarityClass(card)}">${escapeHtml(card.name)}</span>`)
         .join("");
+    }
+
+    function renderGuessed() {
+      renderCardList("guessedList", cards.filter(card => guessed.has(card.id)));
+      renderCardList("remainingList", cards.filter(card => !guessed.has(card.id)));
     }
 
     function escapeHtml(text) {
@@ -383,6 +420,7 @@
     function chooseNextCard() {
       acceptingGuess = true;
       remaining = cards.filter(card => !guessed.has(card.id));
+      renderGuessed();
 
       if (!remaining.length) {
         $("game").classList.add("hidden");
@@ -418,6 +456,7 @@
       if (unguessedMatches.length) {
         currentCard = unguessedMatches[0];
         guessed.add(currentCard.id);
+        $("guess").value = "";
         saveState();
         renderProgress();
         renderGuessed();
@@ -519,6 +558,11 @@
     $("guessForm").addEventListener("submit", submitGuess);
     $("reset").addEventListener("click", resetGame);
     $("playAgain").addEventListener("click", resetGame);
+    $("remainingSection").addEventListener("toggle", event => {
+      if (event.target.open && !window.confirm("Reveal the cards you have not guessed yet?")) {
+        event.target.open = false;
+      }
+    });
 
     init();
   </script>
