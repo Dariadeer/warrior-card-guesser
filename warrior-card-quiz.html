@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hearthstone Warrior Card Quiz</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #10131a;
+      --panel: #191e28;
+      --panel2: #222938;
+      --text: #f1f3f7;
+      --muted: #9ca6b7;
+      --accent: #d8a84e;
+      --good: #5fcf8a;
+      --bad: #e06b6b;
+      --border: #343d4d;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #20283a 0, var(--bg) 45%);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .app {
+      width: min(760px, 100%);
+      background: rgba(25, 30, 40, .96);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, .35);
+    }
+
+    h1 {
+      margin: 0 0 5px;
+      font-size: clamp(24px, 5vw, 36px);
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 22px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .progress {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .progress span {
+      color: var(--accent);
+    }
+
+    button {
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      color: var(--text);
+      border-radius: 9px;
+      padding: 9px 13px;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    button:hover {
+      border-color: #596579;
+    }
+
+    .card-area {
+      height: 420px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 20px;
+    }
+
+    .card-area img {
+      width: min(330px, 72vw);
+      max-height: 495px;
+      object-fit: contain;
+      border-radius: 12px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, .5);
+    }
+
+    .placeholder {
+      color: var(--muted);
+      text-align: center;
+      padding: 50px 20px;
+    }
+
+    form {
+      display: flex;
+      gap: 10px;
+    }
+
+    input {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid var(--border);
+      background: #0e1117;
+      color: var(--text);
+      border-radius: 9px;
+      padding: 13px 14px;
+      font: inherit;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+    }
+
+    form button {
+      background: var(--accent);
+      color: #17130b;
+      border-color: var(--accent);
+      font-weight: 800;
+    }
+
+    .message {
+      min-height: 27px;
+      margin-top: 12px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .message.good {
+      color: var(--good);
+    }
+
+    .message.bad {
+      color: var(--bad);
+    }
+
+    .guessed {
+      margin-top: 24px;
+      border-top: 1px solid var(--border);
+      padding-top: 18px;
+    }
+
+    .guessed summary {
+      cursor: pointer;
+      color: var(--muted);
+    }
+
+    .guessed-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 13px;
+    }
+
+    .chip {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      padding: 5px 8px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .chip.common {
+      border-color: #8d96a3;
+      color: #d7dbe0;
+    }
+
+    .chip.rare {
+      border-color: #4b9be8;
+      color: #72b7ff;
+    }
+
+    .chip.epic {
+      border-color: #a86de0;
+      color: #c38af2;
+    }
+
+    .chip.legendary {
+      border-color: #e5a43a;
+      color: #ffc55e;
+    }
+
+    .chip.free {
+      border-color: #70b67b;
+      color: #8ed99a;
+    }
+
+    .chip.reward {
+      border-color: #c6a96b;
+      color: #e2c98f;
+    }
+
+    .done {
+      text-align: center;
+      padding: 60px 15px;
+    }
+
+    .done h2 {
+      font-size: 32px;
+      margin: 0 0 8px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .error {
+      color: var(--bad);
+      line-height: 1.5;
+      text-align: center;
+      padding: 40px 10px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 560px) {
+      .app {
+        padding: 18px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+      }
+
+      form {
+        flex-direction: column;
+      }
+
+      form button {
+        width: 100%;
+      }
+
+      .card-area {
+        height: 340px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <h1>Warrior Card Quiz</h1>
+    <div class="subtitle">Name every collectible Warrior card currently playable in Wild.</div>
+
+    <div id="loading" class="placeholder">
+      Loading the current Hearthstone card database…
+    </div>
+
+    <section id="game" class="hidden">
+      <div class="topbar">
+        <div class="progress"><span id="count">0</span> / <span id="total">0</span> guessed</div>
+        <button id="reset" type="button">Restart</button>
+      </div>
+
+      <div id="cardArea" class="card-area"></div>
+
+      <form id="guessForm" autocomplete="off">
+        <input id="guess" type="text" placeholder="Enter card name…" autofocus>
+        <button type="submit">Guess</button>
+      </form>
+      <div id="message" class="message"></div>
+      <div class="hint">Enter any unguessed card name. Names are case-insensitive, and punctuation is ignored.</div>
+
+      <details class="guessed">
+        <summary>Guessed cards</summary>
+        <div id="guessedList" class="guessed-list"></div>
+      </details>
+    </section>
+
+    <section id="finished" class="done hidden">
+      <h2>Complete</h2>
+      <p>You named every Warrior card in the current Wild pool.</p>
+      <button id="playAgain" type="button">Play again</button>
+    </section>
+
+    <div id="error" class="error hidden"></div>
+  </main>
+
+  <script>
+    "use strict";
+
+    /*
+    * The card list is deliberately loaded from HearthstoneJSON rather than
+    * copied into this file. Its /latest/ endpoint tracks the current game data,
+    * so this page stays current as Hearthstone changes. The collectible endpoint
+    * keeps this a single portable HTML file; no dataset installation is needed.
+     *
+     * The quiz itself is still a single HTML file; it only needs internet access
+     * to obtain the current card list and card images.
+     */
+    const CARD_DATA_URL =
+      "https://api.hearthstonejson.com/v1/latest/enUS/cards.collectible.json";
+
+    const ART_URL =
+      "https://art.hearthstonejson.com/v1/render/latest/enUS/512x/";
+
+    const STORAGE_KEY = "warrior-card-quiz-v1";
+
+    let cards = [];
+    let remaining = [];
+    let guessed = new Set();
+    let currentCard = null;
+    let acceptingGuess = true;
+
+    const $ = id => document.getElementById(id);
+
+    function normalise(value) {
+      return value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/['’`]/g, "")
+        .replace(/[^a-z0-9]+/g, "");
+    }
+
+    function isWarrior(card) {
+      // cardClass covers ordinary Warrior cards.
+      // classes covers multi-class cards introduced by newer sets.
+      return card.cardClass === "WARRIOR" ||
+        Array.isArray(card.classes) && card.classes.includes("WARRIOR");
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        guessed: [...guessed]
+      }));
+    }
+
+    function loadState() {
+      try {
+        const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        if (Array.isArray(state.guessed)) {
+          guessed = new Set(state.guessed);
+        }
+      } catch {
+        guessed = new Set();
+      }
+    }
+
+    function renderProgress() {
+      $("count").textContent = guessed.size;
+      $("total").textContent = cards.length;
+    }
+
+    function rarityClass(card) {
+      return String(card.rarity || "COMMON").toLowerCase();
+    }
+
+    function renderGuessed() {
+      const byName = new Map(cards.map(card => [card.name, card]));
+      $("guessedList").innerHTML = [...guessed]
+        .map(name => {
+          const card = byName.get(name);
+          const rarity = card ? rarityClass(card) : "common";
+          return `<span class="chip ${rarity}">${escapeHtml(name)}</span>`;
+        })
+        .join("");
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function chooseNextCard() {
+      acceptingGuess = true;
+      remaining = cards.filter(card => !guessed.has(card.name));
+
+      if (!remaining.length) {
+        $("game").classList.add("hidden");
+        $("finished").classList.remove("hidden");
+        return;
+      }
+
+      // Avoid immediately repeating the previous card where possible.
+      let pool = remaining;
+      if (remaining.length > 1 && currentCard) {
+        pool = remaining.filter(c => c.id !== currentCard.id);
+      }
+
+      currentCard = pool[Math.floor(Math.random() * pool.length)];
+      $("cardArea").replaceChildren();
+      $("guess").value = "";
+      $("guess").focus();
+      $("message").textContent = "";
+      $("message").className = "message";
+    }
+
+    function submitGuess(event) {
+      event.preventDefault();
+      if (!acceptingGuess) return;
+
+      const value = $("guess").value.trim();
+      if (!value) return;
+
+      const actual = normalise(value);
+      const matchedCard = cards.find(card => normalise(card.name) === actual);
+
+      if (matchedCard && !guessed.has(matchedCard.name)) {
+        currentCard = matchedCard;
+        guessed.add(currentCard.name);
+        saveState();
+        renderProgress();
+        renderGuessed();
+
+        $("message").textContent = "Correct.";
+        $("message").className = "message good";
+
+        const image = document.createElement("img");
+        image.alt = currentCard.name;
+        image.src = ART_URL + encodeURIComponent(currentCard.id) + ".png";
+        image.onerror = () => {
+          $("cardArea").innerHTML =
+            `<div class="placeholder">Card image could not be loaded.</div>`;
+        };
+        $("cardArea").replaceChildren(image);
+      } else {
+        $("message").textContent = matchedCard ? "Already guessed." : "Incorrect.";
+        $("message").className = "message bad";
+        $("guess").select();
+      }
+    }
+
+    function resetGame() {
+      guessed = new Set();
+      currentCard = null;
+      localStorage.removeItem(STORAGE_KEY);
+      $("finished").classList.add("hidden");
+      $("game").classList.remove("hidden");
+      renderProgress();
+      renderGuessed();
+      chooseNextCard();
+    }
+
+    async function init() {
+      try {
+        const response = await fetch(CARD_DATA_URL, { cache: "no-cache" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const allCards = await response.json();
+
+        /*
+         * Wild includes Standard cards too. Therefore we intentionally do not
+         * filter by set/rotation here: every collectible Warrior card is part of
+         * the Wild pool. The endpoint is already collection-only, but keep the
+         * collectible check as a defensive filter for any future API changes.
+         */
+        cards = allCards
+          .filter(card => card.collectible === true && isWarrior(card) && card.set !== "HERO_SKINS")
+          .filter((card, index, arr) =>
+            arr.findIndex(other => other.id === card.id) === index)
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        if (!cards.length) throw new Error("No Warrior cards were returned.");
+
+        loadState();
+
+        // Remove saved names that no longer exist in the current data.
+        const validNames = new Set(cards.map(c => c.name));
+        guessed = new Set([...guessed].filter(name => validNames.has(name)));
+
+        $("loading").classList.add("hidden");
+        $("game").classList.remove("hidden");
+
+        renderProgress();
+        renderGuessed();
+        chooseNextCard();
+      } catch (error) {
+        $("loading").classList.add("hidden");
+        $("error").classList.remove("hidden");
+        $("error").innerHTML =
+          "<strong>Could not load the card database.</strong><br>" +
+          "This quiz needs an internet connection to retrieve the current " +
+          "Hearthstone card list and images.<br><br>" +
+          escapeHtml(error.message);
+      }
+    }
+
+    $("guessForm").addEventListener("submit", submitGuess);
+    $("reset").addEventListener("click", resetGame);
+    $("playAgain").addEventListener("click", resetGame);
+
+    init();
+  </script>
+</body>
+
+</html>
