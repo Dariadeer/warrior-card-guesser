@@ -367,13 +367,10 @@
     }
 
     function renderGuessed() {
-      const byName = new Map(cards.map(card => [card.name, card]));
-      $("guessedList").innerHTML = [...guessed]
-        .map(name => {
-          const card = byName.get(name);
-          const rarity = card ? rarityClass(card) : "common";
-          return `<span class="chip ${rarity}">${escapeHtml(name)}</span>`;
-        })
+      $("guessedList").innerHTML = cards
+        .filter(card => guessed.has(card.id))
+        .map(card =>
+          `<span class="chip ${rarityClass(card)}">${escapeHtml(card.name)}</span>`)
         .join("");
     }
 
@@ -385,7 +382,7 @@
 
     function chooseNextCard() {
       acceptingGuess = true;
-      remaining = cards.filter(card => !guessed.has(card.name));
+      remaining = cards.filter(card => !guessed.has(card.id));
 
       if (!remaining.length) {
         $("game").classList.add("hidden");
@@ -415,11 +412,12 @@
       if (!value) return;
 
       const actual = normalise(value);
-      const matchedCard = cards.find(card => normalise(card.name) === actual);
+      const matchedCards = cards.filter(card => normalise(card.name) === actual);
+      const unguessedMatches = matchedCards.filter(card => !guessed.has(card.id));
 
-      if (matchedCard && !guessed.has(matchedCard.name)) {
-        currentCard = matchedCard;
-        guessed.add(currentCard.name);
+      if (unguessedMatches.length) {
+        currentCard = unguessedMatches[0];
+        guessed.add(currentCard.id);
         saveState();
         renderProgress();
         renderGuessed();
@@ -436,7 +434,7 @@
         };
         $("cardArea").replaceChildren(image);
       } else {
-        $("message").textContent = matchedCard ? "Already guessed." : "Incorrect.";
+        $("message").textContent = matchedCards.length ? "Already guessed." : "Incorrect.";
         $("message").className = "message bad";
         $("guess").select();
       }
@@ -466,19 +464,40 @@
          * the Wild pool. The endpoint is already collection-only, but keep the
          * collectible check as a defensive filter for any future API changes.
          */
-        cards = allCards
+        const uniqueCardsByName = new Map();
+        allCards
           .filter(card => card.collectible === true && isWarrior(card) && card.set !== "HERO_SKINS")
           .filter((card, index, arr) =>
             arr.findIndex(other => other.id === card.id) === index)
+          .forEach(card => {
+            const nameKey = normalise(card.name);
+            if (!uniqueCardsByName.has(nameKey)) {
+              uniqueCardsByName.set(nameKey, card);
+            }
+          });
+
+        cards = [...uniqueCardsByName.values()]
           .sort((a, b) => a.name.localeCompare(b.name));
 
         if (!cards.length) throw new Error("No Warrior cards were returned.");
 
         loadState();
 
-        // Remove saved names that no longer exist in the current data.
-        const validNames = new Set(cards.map(c => c.name));
-        guessed = new Set([...guessed].filter(name => validNames.has(name)));
+        // Keep saved card IDs and migrate older name-based progress.
+        const validIds = new Set(cards.map(card => card.id));
+        const validNames = new Set(cards.map(card => card.name));
+        const savedValues = [...guessed];
+        const migratedGuessed = new Set(
+          savedValues.filter(value => validIds.has(value))
+        );
+        savedValues
+          .filter(value => validNames.has(value) && !validIds.has(value))
+          .forEach(name => {
+            cards
+              .filter(card => card.name === name)
+              .forEach(card => migratedGuessed.add(card.id));
+          });
+        guessed = migratedGuessed;
 
         $("loading").classList.add("hidden");
         $("game").classList.remove("hidden");
