@@ -350,6 +350,27 @@
         .replace(/[^a-z0-9]+/g, "");
     }
 
+    function stringSimilarity(first, second) {
+      if (first === second) return 1;
+      if (!first.length || !second.length) return 0;
+
+      const previousRow = Array.from({ length: second.length + 1 }, (_, index) => index);
+      for (let firstIndex = 1; firstIndex <= first.length; firstIndex += 1) {
+        const currentRow = [firstIndex];
+        for (let secondIndex = 1; secondIndex <= second.length; secondIndex += 1) {
+          const substitutionCost = first[firstIndex - 1] === second[secondIndex - 1] ? 0 : 1;
+          currentRow[secondIndex] = Math.min(
+            currentRow[secondIndex - 1] + 1,
+            previousRow[secondIndex] + 1,
+            previousRow[secondIndex - 1] + substitutionCost
+          );
+        }
+        previousRow.splice(0, previousRow.length, ...currentRow);
+      }
+
+      return 1 - previousRow[second.length] / Math.max(first.length, second.length);
+    }
+
     function isWarrior(card) {
       // cardClass covers ordinary Warrior cards.
       // classes covers multi-class cards introduced by newer sets.
@@ -473,7 +494,16 @@
         };
         $("cardArea").replaceChildren(image);
       } else {
-        $("message").textContent = matchedCards.length ? "Already guessed." : "Incorrect.";
+        if (matchedCards.length) {
+          $("message").textContent = "Already guessed.";
+        } else {
+          const closestSimilarity = Math.max(
+            ...cards.map(card => stringSimilarity(actual, normalise(card.name)))
+          );
+          const similarityPercent = Math.round(closestSimilarity * 100);
+          $("message").textContent =
+            `Incorrect. Your closest match was ${similarityPercent}% similar.`;
+        }
         $("message").className = "message bad";
         $("guess").select();
       }
