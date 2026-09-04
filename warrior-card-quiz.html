@@ -588,9 +588,10 @@
     $("guessForm").addEventListener("submit", submitGuess);
     $("reset").addEventListener("click", resetGame);
     $("playAgain").addEventListener("click", resetGame);
-    $("remainingSection").addEventListener("toggle", event => {
-      if (event.target.open && !window.confirm("Reveal the cards you have not guessed yet?")) {
-        event.target.open = false;
+    $("remainingSection").querySelector("summary").addEventListener("click", event => {
+      if (!$("remainingSection").open &&
+        !window.confirm("Reveal the cards you have not guessed yet?")) {
+        event.preventDefault();
       }
     });
 
