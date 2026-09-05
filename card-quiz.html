@@ -579,7 +579,24 @@
         previousRow.splice(0, previousRow.length, ...currentRow);
       }
 
-      return 1 - previousRow[second.length] / Math.max(first.length, second.length);
+      const firstCounts = new Map();
+      const secondCounts = new Map();
+      for (const character of first) {
+        firstCounts.set(character, (firstCounts.get(character) || 0) + 1);
+      }
+      for (const character of second) {
+        secondCounts.set(character, (secondCounts.get(character) || 0) + 1);
+      }
+
+      const unmatchedInputCharacters = [...firstCounts].reduce(
+        (total, [character, count]) =>
+          total + Math.max(0, count - (secondCounts.get(character) || 0)),
+        0
+      );
+      const longestLength = Math.max(first.length, second.length);
+      const editSimilarity = 1 - previousRow[second.length] / longestLength;
+      const unmatchedPenalty = unmatchedInputCharacters / longestLength;
+      return Math.max(0, editSimilarity - unmatchedPenalty);
     }
 
     function closestCardFor(value, candidates) {
