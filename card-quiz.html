@@ -292,6 +292,26 @@
       color: var(--text);
     }
 
+    .tiiny-flyout-close {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      z-index: 1;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .tiiny-flyout-close:hover {
+      border: 0;
+      background: rgba(0, 0, 0, .12);
+    }
+
     .modal-panel h2 {
       margin: 0 0 8px;
     }
@@ -560,6 +580,27 @@
         .replace(/['’`]/g, "")
         .replace(/[^a-z0-9]+/g, "");
     }
+
+    function addTiinyFlyoutCloseButton() {
+      const link = document.querySelector('a[href="https://tiiny.host?ref=free-site"]');
+      const flyout = link?.parentElement;
+      if (!flyout || flyout.querySelector(".tiiny-flyout-close")) return;
+
+      flyout.style.position = "relative";
+      const closeButton = document.createElement("button");
+      closeButton.className = "tiiny-flyout-close";
+      closeButton.type = "button";
+      closeButton.setAttribute("aria-label", "Close Tiiny host message");
+      closeButton.textContent = "×";
+      closeButton.addEventListener("click", () => flyout.remove());
+      flyout.append(closeButton);
+    }
+
+    addTiinyFlyoutCloseButton();
+    new MutationObserver(addTiinyFlyoutCloseButton).observe(document.body, {
+      childList: true,
+      subtree: true
+    });
 
     function stringSimilarity(first, second) {
       if (first === second) return 1;
