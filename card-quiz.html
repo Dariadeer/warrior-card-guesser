@@ -582,7 +582,7 @@
     }
 
     function addTiinyFlyoutCloseButton() {
-      const link = document.querySelector('a[href="https://tiiny.host?ref=free-site"]');
+      const link = [...document.querySelectorAll('a')].find(a => a.innerHTML.includes('tiiny'));
       const flyout = link?.parentElement;
       if (!flyout || flyout.querySelector(".tiiny-flyout-close")) return;
 
